@@ -1,25 +1,27 @@
 import React, { useEffect, useState, useMemo } from "react";
+import classNames from "classnames";
 import "./App.css";
 
-var msg = new SpeechSynthesisUtterance();
-var voices = window.speechSynthesis.getVoices();
-msg.voice = voices[9]; // Note: some voices don't support altering params
-msg.voiceURI = "native";
 // msg.volume = 1; // 0 to 1
 // msg.rate = 1; // 0.1 to 10
 // msg.pitch = 2; //0 to 2
 // msg.text = "Hello World";
-msg.lang = "it-IT";
 
 var recognition = new window.webkitSpeechRecognition();
 recognition.continuous = false;
 recognition.interimResults = false;
 recognition.lang = ["it-IT", "Italia"];
 
-// recognition.onstart = function() { ... }
-// recognition.onresult = function(event) { ... }
-// recognition.onerror = function(event) { ... }
-// recognition.onend = function() { ... }
+function getSpeechMessage(text, callback = () => {}) {
+  const voices = window.speechSynthesis.getVoices();
+  const msg = new SpeechSynthesisUtterance();
+  msg.voice = voices[9];
+  msg.voiceURI = "native";
+  msg.lang = "it-IT";
+  msg.text = text;
+  msg.onend = callback;
+  return msg;
+}
 
 function getRandomIntInclusive(min, max) {
   min = Math.ceil(min);
@@ -33,10 +35,14 @@ function getCalculus(min, max) {
   return [a, b, a * b];
 }
 
-function parseResult(response) {
+function parseResponse(response) {
   const numbersFound = response.replace(/[^0-9 ]/).split(" ");
-  console.log("numbersFound", numbersFound.toString());
-  return numbersFound[numbersFound.length - 1];
+  return parseInt(numbersFound[numbersFound.length - 1], 10);
+}
+
+function getCorrectMotivationMessage() {
+  const messages = ["Bravo!", "Ok!", "Continua così", "Perfetto"];
+  return messages[getRandomIntInclusive(0, messages.length - 1)];
 }
 
 const Calculus = ({ a, b, operator, result, response }) => {
@@ -47,25 +53,59 @@ const Calculus = ({ a, b, operator, result, response }) => {
       </p>
     );
   }
-  return null;
+  return <p>&nbsp;</p>;
 };
 
-const Response = ({ response, result }) => {
+const Response = ({ isCorrectAnswer, response, result }) => {
+  const classes = classNames({
+    correct: isCorrectAnswer,
+    error: !isCorrectAnswer
+  });
   if (response) {
     return (
       <p>
-        La tua risposta è <b>{response}</b>
+        La tua risposta è <b>{response}</b>.<br />
+        {isCorrectAnswer ? (
+          <i className={classes}>Bravo, la risposta è corretta!</i>
+        ) : (
+          <i className={classes}>
+            La risposta è sbagliata <b>{result}</b>!
+          </i>
+        )}
       </p>
     );
   }
-  return "";
+  return <p>&nbsp;</p>;
 };
 
-function App({ min = 6, max = 9 }) {
+const History = ({ history }) => {
+  return (
+    <ul>
+      {history.map(([a, b, operator, response, result], i) => {
+        const isCorrectAnswer = response === result;
+        return (
+          <li key={i}>
+            {a} {operator} {b} = {response}{" "}
+            {isCorrectAnswer ? (
+              <span className="correct">✔</span>
+            ) : (
+              <>
+                <span className="error">✘</span> <b>({result})</b>
+              </>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+};
+
+function App({ min = 6, max = 9, operator = "x" }) {
   const [calculus, setCalculus] = useState(false);
   const [matrix, setMatrix] = useState([]);
   const [listening, setListening] = useState(false);
   const [response, setResponse] = useState();
+  const [history, setHistory] = useState([]);
 
   const [a, b, result] = useMemo(() => {
     if (matrix.length) {
@@ -73,6 +113,26 @@ function App({ min = 6, max = 9 }) {
     }
     return [];
   }, [matrix]);
+
+  // console.log(
+  //   "listening",
+  //   listening,
+  //   "→ ",
+  //   a,
+  //   operator,
+  //   b,
+  //   "=",
+  //   result,
+  //   " → ",
+  //   response
+  // );
+
+  const isCorrectAnswer = useMemo(() => {
+    if (result && response) {
+      return result === response;
+    }
+    return undefined;
+  }, [result, response]);
 
   useEffect(() => {
     if (calculus) {
@@ -82,16 +142,10 @@ function App({ min = 6, max = 9 }) {
 
   useEffect(() => {
     if (a && b) {
-      msg.text = `${a} x ${b}`;
-      console.log(msg.text, result);
-
-      msg.onend = function(event) {
-        setTimeout(() => {
-          setListening(true);
-        });
-      };
-
-      speechSynthesis.speak(msg);
+      const msg = getSpeechMessage(`${a} x ${b}`, event => {
+        setListening(true);
+      });
+      window.speechSynthesis.speak(msg);
     }
   }, [a, b]);
 
@@ -104,11 +158,22 @@ function App({ min = 6, max = 9 }) {
       recognition.onresult = function(event) {
         for (var i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
-            setResponse(parseResult(event.results[i][0].transcript));
+            const speechResponse = parseResponse(
+              event.results[i][0].transcript
+            );
+            setResponse(speechResponse);
+            setHistory([...history, [a, b, operator, speechResponse, result]]);
           } else {
             console.warn("Not implemented");
           }
         }
+      };
+      recognition.onerror = function() {
+        setResponse("＿");
+        setHistory([...history, [a, b, operator, "＿", result]]);
+      };
+      recognition.onend = function() {
+        console.log("recognition end");
         setListening(false);
         setCalculus(false);
       };
@@ -117,30 +182,48 @@ function App({ min = 6, max = 9 }) {
     }
   }, [listening]);
 
+  useEffect(() => {
+    if (isCorrectAnswer) {
+      const msg = getSpeechMessage(getCorrectMotivationMessage());
+      speechSynthesis.speak(msg);
+    }
+  }, [isCorrectAnswer]);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <Calculus
-          a={a}
-          b={b}
-          operator="x"
-          result={result}
-          response={response}
-        />
+      <div className="App-header">
+        <div className="App-results">
+          <History history={history} />
+        </div>
+        <div className="App-main">
+          <Calculus
+            a={a}
+            b={b}
+            operator={operator}
+            result={result}
+            response={response}
+          />
 
-        <Response response={response} result={result} />
+          <Response
+            isCorrectAnswer={isCorrectAnswer}
+            response={response}
+            result={result}
+          />
 
-        <button
-          className="App-button"
-          disabled={calculus}
-          onClick={e => {
-            setResponse();
-            setCalculus(true);
-          }}
-        >
-          Via!
-        </button>
-      </header>
+          <p>
+            <button
+              className="App-button"
+              disabled={calculus}
+              onClick={e => {
+                setResponse();
+                setCalculus(true);
+              }}
+            >
+              Via!
+            </button>
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
