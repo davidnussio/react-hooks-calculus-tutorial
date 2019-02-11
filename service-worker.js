@@ -14,7 +14,7 @@
 importScripts("https://storage.googleapis.com/workbox-cdn/releases/3.6.3/workbox-sw.js");
 
 importScripts(
-  "/rhct-gh-pages/precache-manifest.175d15ada5705ce32ba46acd6c37e6a0.js"
+  "/react-hooks-calculus-tutorial/precache-manifest.8ca95d3b573570f8970d06b86fd7befb.js"
 );
 
 workbox.clientsClaim();
@@ -28,7 +28,7 @@ self.__precacheManifest = [].concat(self.__precacheManifest || []);
 workbox.precaching.suppressWarnings();
 workbox.precaching.precacheAndRoute(self.__precacheManifest, {});
 
-workbox.routing.registerNavigationRoute("/rhct-gh-pages/index.html", {
+workbox.routing.registerNavigationRoute("/react-hooks-calculus-tutorial/index.html", {
   
   blacklist: [/^\/_/,/\/[^\/]+\.[^\/]+$/],
 });

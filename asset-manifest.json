@@ -1,13 +1,13 @@
 {
-  "main.css": "/rhct-gh-pages/static/css/main.51c7bd44.chunk.css",
-  "main.js": "/rhct-gh-pages/static/js/main.ac363f1a.chunk.js",
-  "main.js.map": "/rhct-gh-pages/static/js/main.ac363f1a.chunk.js.map",
-  "static/js/1.3e3c2ed5.chunk.js": "/rhct-gh-pages/static/js/1.3e3c2ed5.chunk.js",
-  "static/js/1.3e3c2ed5.chunk.js.map": "/rhct-gh-pages/static/js/1.3e3c2ed5.chunk.js.map",
-  "runtime~main.js": "/rhct-gh-pages/static/js/runtime~main.3d9916f2.js",
-  "runtime~main.js.map": "/rhct-gh-pages/static/js/runtime~main.3d9916f2.js.map",
-  "static/css/main.51c7bd44.chunk.css.map": "/rhct-gh-pages/static/css/main.51c7bd44.chunk.css.map",
-  "index.html": "/rhct-gh-pages/index.html",
-  "precache-manifest.175d15ada5705ce32ba46acd6c37e6a0.js": "/rhct-gh-pages/precache-manifest.175d15ada5705ce32ba46acd6c37e6a0.js",
-  "service-worker.js": "/rhct-gh-pages/service-worker.js"
+  "main.css": "/react-hooks-calculus-tutorial/static/css/main.51c7bd44.chunk.css",
+  "main.js": "/react-hooks-calculus-tutorial/static/js/main.6dc51bd9.chunk.js",
+  "main.js.map": "/react-hooks-calculus-tutorial/static/js/main.6dc51bd9.chunk.js.map",
+  "static/js/1.3e3c2ed5.chunk.js": "/react-hooks-calculus-tutorial/static/js/1.3e3c2ed5.chunk.js",
+  "static/js/1.3e3c2ed5.chunk.js.map": "/react-hooks-calculus-tutorial/static/js/1.3e3c2ed5.chunk.js.map",
+  "runtime~main.js": "/react-hooks-calculus-tutorial/static/js/runtime~main.8f094665.js",
+  "runtime~main.js.map": "/react-hooks-calculus-tutorial/static/js/runtime~main.8f094665.js.map",
+  "static/css/main.51c7bd44.chunk.css.map": "/react-hooks-calculus-tutorial/static/css/main.51c7bd44.chunk.css.map",
+  "index.html": "/react-hooks-calculus-tutorial/index.html",
+  "precache-manifest.8ca95d3b573570f8970d06b86fd7befb.js": "/react-hooks-calculus-tutorial/precache-manifest.8ca95d3b573570f8970d06b86fd7befb.js",
+  "service-worker.js": "/react-hooks-calculus-tutorial/service-worker.js"
 }
