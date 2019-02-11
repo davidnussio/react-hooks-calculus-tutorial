@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import classNames from "classnames";
 import "./App.css";
 
@@ -29,10 +29,14 @@ function getRandomIntInclusive(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min; //Il max è incluso e il min è incluso
 }
 
-function getCalculus(min, max) {
+function getCalculus(min, max, operator) {
   const a = getRandomIntInclusive(min, max);
   const b = getRandomIntInclusive(min, max);
-  return [a, b, a * b];
+  if (operator === "x") {
+    return [a, b, a * b];
+  } else if (operator === "+") {
+    return [a, b, a + b];
+  }
 }
 
 function parseResponse(response) {
@@ -43,6 +47,26 @@ function parseResponse(response) {
 function getCorrectMotivationMessage() {
   const messages = ["Bravo!", "Ok!", "Continua così", "Perfetto"];
   return messages[getRandomIntInclusive(0, messages.length - 1)];
+}
+
+function useResultHistory(calculus, result) {
+  const KEY = "__history_results_storage__";
+  const storage = window.localStorage;
+
+  const prevHistory = storage.getItem(KEY) || [];
+
+  if (calculus && result) {
+    console.log(result);
+
+    // const [history, setHistory] = useState(storage.getItem(KEY) || []);
+
+    console.log("History", prevHistory);
+    const history = [...prevHistory, [...calculus, result]];
+    storage.setItem(KEY, history);
+    return history;
+  }
+
+  return prevHistory;
 }
 
 const Calculus = ({ a, b, operator, result, response }) => {
@@ -100,45 +124,18 @@ const History = ({ history }) => {
   );
 };
 
-function App({ min = 6, max = 9, operator = "x" }) {
+function App({ min = 0, max = 10, operator = "x" }) {
   const [calculus, setCalculus] = useState(false);
-  const [matrix, setMatrix] = useState([]);
   const [listening, setListening] = useState(false);
   const [response, setResponse] = useState();
-  const [history, setHistory] = useState([]);
 
-  const [a, b, result] = useMemo(() => {
-    if (matrix.length) {
-      return matrix[matrix.length - 1];
-    }
-    return [];
-  }, [matrix]);
+  const [a, b, result] = calculus ? calculus : [];
 
-  // console.log(
-  //   "listening",
-  //   listening,
-  //   "→ ",
-  //   a,
-  //   operator,
-  //   b,
-  //   "=",
-  //   result,
-  //   " → ",
-  //   response
-  // );
+  const history = useResultHistory(calculus, response);
 
-  const isCorrectAnswer = useMemo(() => {
-    if (result && response) {
-      return result === response;
-    }
-    return undefined;
-  }, [result, response]);
+  console.log("H → ", history);
 
-  useEffect(() => {
-    if (calculus) {
-      setMatrix([...matrix, getCalculus(min, max)]);
-    }
-  }, [calculus]);
+  const isCorrectAnswer = result && response && result === response;
 
   useEffect(() => {
     if (a && b) {
@@ -162,7 +159,7 @@ function App({ min = 6, max = 9, operator = "x" }) {
               event.results[i][0].transcript
             );
             setResponse(speechResponse);
-            setHistory([...history, [a, b, operator, speechResponse, result]]);
+            // setHistory([...history, [a, b, operator, speechResponse, result]]);
           } else {
             console.warn("Not implemented");
           }
@@ -170,12 +167,11 @@ function App({ min = 6, max = 9, operator = "x" }) {
       };
       recognition.onerror = function() {
         setResponse("＿");
-        setHistory([...history, [a, b, operator, "＿", result]]);
+        // setHistory([...history, [a, b, operator, "＿", result]]);
       };
       recognition.onend = function() {
-        console.log("recognition end");
         setListening(false);
-        setCalculus(false);
+        setCalculus();
       };
     } else {
       recognition.stop();
@@ -216,10 +212,10 @@ function App({ min = 6, max = 9, operator = "x" }) {
               disabled={calculus}
               onClick={e => {
                 setResponse();
-                setCalculus(true);
+                setCalculus(getCalculus(min, max, operator));
               }}
             >
-              Via!
+              Avanti...
             </button>
           </p>
         </div>
