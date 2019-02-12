@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import classNames from "classnames";
 import "./App.css";
 
@@ -49,24 +49,27 @@ function getCorrectMotivationMessage() {
   return messages[getRandomIntInclusive(0, messages.length - 1)];
 }
 
-function useResultHistory(calculus, result) {
+function useResultHistory() {
   const KEY = "__history_results_storage__";
   const storage = window.localStorage;
 
-  const prevHistory = storage.getItem(KEY) || [];
+  const [history, setHistory] = useState(
+    JSON.parse(window.localStorage.getItem(KEY)) || []
+  );
 
-  if (calculus && result) {
-    console.log(result);
+  const updateHistory = useCallback(
+    nextHistoryItem => {
+      if (nextHistoryItem) {
+        const updatedHistory = [...history, nextHistoryItem];
+        console.log("History", history, nextHistoryItem, updatedHistory);
+        setHistory(updatedHistory);
+        storage.setItem(KEY, JSON.stringify(updatedHistory));
+      }
+    },
+    [history]
+  );
 
-    // const [history, setHistory] = useState(storage.getItem(KEY) || []);
-
-    console.log("History", prevHistory);
-    const history = [...prevHistory, [...calculus, result]];
-    storage.setItem(KEY, history);
-    return history;
-  }
-
-  return prevHistory;
+  return [history, save => updateHistory(save)];
 }
 
 const Calculus = ({ a, b, operator, result, response }) => {
@@ -128,17 +131,29 @@ function App({ min = 0, max = 10, operator = "x" }) {
   const [calculus, setCalculus] = useState(false);
   const [listening, setListening] = useState(false);
   const [response, setResponse] = useState();
+  const [isCorrectAnswer, setIsCorrectAnswer] = useState(null);
 
   const [a, b, result] = calculus ? calculus : [];
 
-  const history = useResultHistory(calculus, response);
+  const [history, saveHistory] = useResultHistory();
 
-  console.log("H → ", history);
+  // const isCorrectAnswer = result && response && result === response;
 
-  const isCorrectAnswer = result && response && result === response;
+  console.log("--------------------------------------------");
+  console.log("History → ", history);
+  console.log("Calcolo → ", a, b, result);
+  console.log(
+    "Response → ",
+    response,
+    " → is corret → ",
+    isCorrectAnswer,
+    history[history.length]
+  );
+  console.log("Listening → ", listening);
 
   useEffect(() => {
     if (a && b) {
+      console.log("start speech...");
       const msg = getSpeechMessage(`${a} x ${b}`, event => {
         setListening(true);
       });
@@ -159,7 +174,8 @@ function App({ min = 0, max = 10, operator = "x" }) {
               event.results[i][0].transcript
             );
             setResponse(speechResponse);
-            // setHistory([...history, [a, b, operator, speechResponse, result]]);
+            saveHistory([a, b, operator, speechResponse, result]);
+            setIsCorrectAnswer(result === speechResponse);
           } else {
             console.warn("Not implemented");
           }
@@ -167,7 +183,8 @@ function App({ min = 0, max = 10, operator = "x" }) {
       };
       recognition.onerror = function() {
         setResponse("＿");
-        // setHistory([...history, [a, b, operator, "＿", result]]);
+        saveHistory([a, b, operator, "＿", result]);
+        setIsCorrectAnswer(result === "＿");
       };
       recognition.onend = function() {
         setListening(false);
@@ -211,6 +228,7 @@ function App({ min = 0, max = 10, operator = "x" }) {
               className="App-button"
               disabled={calculus}
               onClick={e => {
+                setIsCorrectAnswer(null);
                 setResponse();
                 setCalculus(getCalculus(min, max, operator));
               }}
