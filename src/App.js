@@ -1,3 +1,5 @@
+// @ts-check
+
 import React, { useEffect, useState, useCallback } from "react";
 import classNames from "classnames";
 import "./App.css";
@@ -6,11 +8,6 @@ import "./App.css";
 // msg.rate = 1; // 0.1 to 10
 // msg.pitch = 2; //0 to 2
 // msg.text = "Hello World";
-
-var recognition = new window.webkitSpeechRecognition();
-recognition.continuous = false;
-recognition.interimResults = false;
-recognition.lang = ["it-IT", "Italia"];
 
 function getSpeechMessage(text, callback = () => {}) {
   const voices = window.speechSynthesis.getVoices();
@@ -39,14 +36,17 @@ function getCalculus(min, max, operator) {
   }
 }
 
-function parseResponse(response) {
-  const numbersFound = response.replace(/[^0-9 ]/).split(" ");
-  return parseInt(numbersFound[numbersFound.length - 1], 10);
-}
-
 function getCorrectMotivationMessage() {
   const messages = ["Bravo!", "Ok!", "Continua così", "Perfetto"];
   return messages[getRandomIntInclusive(0, messages.length - 1)];
+}
+
+function parseResponse(response) {
+  if (response === null) {
+    return "＿";
+  }
+  const numbersFound = response.replace(/[^0-9 ]/).split(" ");
+  return parseInt(numbersFound[numbersFound.length - 1], 10);
 }
 
 function useResultHistory() {
@@ -73,7 +73,7 @@ function useResultHistory() {
 }
 
 const Calculus = ({ a, b, operator, result, response }) => {
-  if (a && b) {
+  if (a !== undefined && b !== undefined) {
     return (
       <p>
         {a} {operator} {b} = {response ? result : "?"}
@@ -96,7 +96,7 @@ const Response = ({ isCorrectAnswer, response, result }) => {
           <i className={classes}>Bravo, la risposta è corretta!</i>
         ) : (
           <i className={classes}>
-            La risposta è sbagliata <b>{result}</b>!
+            La risposta è sbagliata, il risultato era <b>{result}</b>!
           </i>
         )}
       </p>
@@ -107,93 +107,118 @@ const Response = ({ isCorrectAnswer, response, result }) => {
 
 const History = ({ history }) => {
   return (
-    <ul>
-      {history.map(([a, b, operator, response, result], i) => {
-        const isCorrectAnswer = response === result;
-        return (
-          <li key={i}>
-            {a} {operator} {b} = {response}{" "}
-            {isCorrectAnswer ? (
-              <span className="correct">✔</span>
-            ) : (
-              <>
-                <span className="error">✘</span> <b>({result})</b>
-              </>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+    <table>
+      <tbody>
+        {history.map(
+          ([a, b, operator, response, speechRecognition, result], i) => {
+            const isCorrectAnswer = response === result;
+            return (
+              <tr key={i} className="App-history-wrapper">
+                <td>{a}</td>
+                <td>{operator}</td>
+                <td>{b}</td>
+                <td>=</td>
+                <td>{response === "NaN" ? speechRecognition : response}</td>
+
+                {isCorrectAnswer ? (
+                  <td>
+                    <span className="correct">✔</span>
+                  </td>
+                ) : (
+                  <>
+                    <td>
+                      <span className="error">✘</span>
+                    </td>
+                    <td>
+                      <b>({result})</b>
+                    </td>
+                  </>
+                )}
+              </tr>
+            );
+          }
+        )}
+      </tbody>
+    </table>
   );
 };
 
-function App({ min = 0, max = 10, operator = "x" }) {
-  const [calculus, setCalculus] = useState(false);
-  const [listening, setListening] = useState(false);
-  const [response, setResponse] = useState();
-  const [isCorrectAnswer, setIsCorrectAnswer] = useState(null);
+function useSpeechRecognition(listening = false) {
+  const [speechResponse, setSpeechResponse] = useState(undefined);
+  const [recognition] = useState(() => {
+    const instance = new window.webkitSpeechRecognition();
+    instance.continuous = false;
+    instance.interimResults = false;
+    instance.lang = ["it-IT", "Italia"];
+    return instance;
+  });
 
-  const [a, b, result] = calculus ? calculus : [];
+  recognition.onstart = function() {
+    console.log("# recognition → onstart");
+  };
 
-  const [history, saveHistory] = useResultHistory();
-
-  // const isCorrectAnswer = result && response && result === response;
-
-  console.log("--------------------------------------------");
-  console.log("History → ", history);
-  console.log("Calcolo → ", a, b, result);
-  console.log(
-    "Response → ",
-    response,
-    " → is corret → ",
-    isCorrectAnswer,
-    history[history.length]
-  );
-  console.log("Listening → ", listening);
+  recognition.onresult = function(event) {
+    console.log("# recognition → onresult");
+    for (var i = event.resultIndex; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        setSpeechResponse(event.results[i][0].transcript);
+      } else {
+        console.warn("Not implemented");
+      }
+    }
+  };
+  recognition.onerror = function() {
+    console.log("# recognition → onerror");
+    setSpeechResponse(null); //"＿");
+  };
+  recognition.onend = function() {
+    console.log("# recognition → onend");
+    setSpeechResponse(prevState => prevState);
+  };
 
   useEffect(() => {
-    if (a && b) {
-      console.log("start speech...");
-      const msg = getSpeechMessage(`${a} x ${b}`, event => {
-        setListening(true);
-      });
-      window.speechSynthesis.speak(msg);
-    }
-  }, [a, b]);
-
-  useEffect(() => {
-    if (listening === undefined) {
-      return;
-    }
     if (listening === true && recognition) {
       recognition.start();
-      recognition.onresult = function(event) {
-        for (var i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            const speechResponse = parseResponse(
-              event.results[i][0].transcript
-            );
-            setResponse(speechResponse);
-            saveHistory([a, b, operator, speechResponse, result]);
-            setIsCorrectAnswer(result === speechResponse);
-          } else {
-            console.warn("Not implemented");
-          }
-        }
-      };
-      recognition.onerror = function() {
-        setResponse("＿");
-        saveHistory([a, b, operator, "＿", result]);
-        setIsCorrectAnswer(result === "＿");
-      };
-      recognition.onend = function() {
-        setListening(false);
-        setCalculus();
-      };
     } else {
       recognition.stop();
     }
   }, [listening]);
+
+  return speechResponse;
+}
+
+function App({ min = 0, max = 10, operator = "x" }) {
+  const [calculus, setCalculus] = useState([]);
+  const [listening, setListening] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
+  const [response, setResponse] = useState(null);
+  const [isCorrectAnswer, setIsCorrectAnswer] = useState(null);
+
+  const [a, b, result] = calculus;
+
+  const [history, saveHistory] = useResultHistory();
+
+  const speechRecognition = useSpeechRecognition(listening);
+
+  useEffect(() => {
+    if (speechRecognition !== undefined) {
+      const userResult = parseResponse(speechRecognition);
+      saveHistory([a, b, operator, userResult, speechRecognition, result]);
+      setResponse(userResult);
+      setIsCorrectAnswer(result === userResult);
+      setListening(false);
+    }
+  }, [speechRecognition]);
+
+  useEffect(() => {
+    if (speaking && Number.isNaN(a) === false && Number.isNaN(b) === false) {
+      const msg = getSpeechMessage(`${a} x ${b}`, event => {
+        setSpeaking(false);
+        setListening(true);
+      });
+      window.speechSynthesis.speak(msg);
+    }
+  }, [speaking]);
 
   useEffect(() => {
     if (isCorrectAnswer) {
@@ -201,6 +226,13 @@ function App({ min = 0, max = 10, operator = "x" }) {
       speechSynthesis.speak(msg);
     }
   }, [isCorrectAnswer]);
+
+  useCallback(() => {
+    setIsCorrectAnswer(null);
+    setResponse(null);
+    setCalculus(getCalculus(min, max, operator));
+    setSpeaking(true);
+  }, [min, max, operator]);
 
   return (
     <div className="App">
@@ -226,11 +258,12 @@ function App({ min = 0, max = 10, operator = "x" }) {
           <p>
             <button
               className="App-button"
-              disabled={calculus}
+              disabled={speaking || listening}
               onClick={e => {
                 setIsCorrectAnswer(null);
-                setResponse();
+                setResponse(null);
                 setCalculus(getCalculus(min, max, operator));
+                setSpeaking(true);
               }}
             >
               Avanti...

@@ -54,3 +54,7 @@ li.correct {
   background-color: #61dafb3a;
   color: black;
 }
+
+.App-history-wrapper {
+  text-align: right;
+}
